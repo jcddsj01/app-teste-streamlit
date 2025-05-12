@@ -1,23 +1,30 @@
 import streamlit as st
 import mysql.connector
+from datetime import datetime
 from dotenv import load_dotenv
 import os
-from datetime import datetime
 
-# Carregar variáveis do .env
+# Tentar carregar variáveis do .env local (apenas em ambiente local)
 load_dotenv()
 
-# Função para conectar ao banco
-def conectar_banco():
-    return mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        port=int(os.getenv("DB_PORT")),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME")
+# Função para pegar variável de ambiente ou dos secrets
+def get_env(key):
+    return (
+        os.getenv(key) or
+        st.secrets["general"].get(key)
     )
 
-# Função para criar tabela (executada uma vez)
+# Função para conectar ao banco de dados
+def conectar_banco():
+    return mysql.connector.connect(
+        host=get_env("DB_HOST"),
+        port=int(get_env("DB_PORT")),
+        user=get_env("DB_USER"),
+        password=get_env("DB_PASSWORD"),
+        database=get_env("DB_NAME")
+    )
+
+# Criar tabela caso não exista
 def criar_tabela():
     conn = conectar_banco()
     cursor = conn.cursor()
@@ -35,7 +42,7 @@ def criar_tabela():
     cursor.close()
     conn.close()
 
-# Função para inserir dados
+# Inserir dados
 def inserir_dados(nome, idade, profissao, salario):
     conn = conectar_banco()
     cursor = conn.cursor()
@@ -48,7 +55,20 @@ def inserir_dados(nome, idade, profissao, salario):
     cursor.close()
     conn.close()
 
-# Interface do Streamlit
+# Listar dados
+def listar_dados():
+    conn = conectar_banco()
+    cursor = conn.cursor()
+    cursor.execute("SELECT nome, idade, profissao, salario, data_hora FROM pessoas ORDER BY id DESC")
+    dados = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return dados
+
+# =====================
+# 🖥️ Interface Streamlit
+# =====================
+
 st.title("Cadastro de Pessoas")
 
 with st.form("formulario"):
@@ -60,8 +80,13 @@ with st.form("formulario"):
 
 if enviado:
     if nome and profissao:
-        criar_tabela()  # cria a tabela se não existir
+        criar_tabela()
         inserir_dados(nome, idade, profissao, salario)
-        st.success("Dados salvos com sucesso!")
+        st.success("✅ Dados salvos com sucesso!")
     else:
-        st.warning("Por favor, preencha todos os campos obrigatórios.")
+        st.warning("⚠️ Por favor, preencha todos os campos obrigatórios.")
+
+# Exibir dados
+st.subheader("📋 Registros salvos")
+for linha in listar_dados():
+    st.write(f"🧑 {linha[0]}, {linha[1]} anos, {linha[2]}, R$ {linha[3]:.2f} — {linha[4].strftime('%d/%m/%Y %H:%M:%S')}")
