@@ -1,0 +1,10 @@
+# Ambiente virtual
+venv/
+.env
+
+# Cache e arquivos temporários
+__pycache__/
+*.pyc
+
+# Configuração do Streamlit
+.config/
