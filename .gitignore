@@ -8,3 +8,5 @@ __pycache__/
 
 # Configuração do Streamlit
 .config/
+
+.devcontainer/
